@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #ifndef KBE_ENGINE_COMPONENT_MGR_H
 #define KBE_ENGINE_COMPONENT_MGR_H
@@ -57,6 +39,7 @@ public:
 
 			groupOrderid = 0;
 			globalOrderid = 0;
+			gus = 0;
 
 			pChannel = NULL;
 			state = COMPONENT_STATE_INIT;
@@ -68,6 +51,7 @@ public:
 			pid = 0;
 			externalAddressEx[0] = '\0';
 			logTime = timestamp();
+			appFlags = APP_FLAGS_NONE;
 		}
 
 		KBEShared_ptr<Network::Address> pIntAddr, pExtAddr;		// 内部和外部地址
@@ -76,6 +60,7 @@ public:
 		int32 uid;
 		COMPONENT_ID cid;
 		COMPONENT_ORDER groupOrderid, globalOrderid;
+		COMPONENT_GUS gus;
 		char username[MAX_NAME + 1];
 		Network::Channel* pChannel;
 		COMPONENT_TYPE componentType;
@@ -90,6 +75,7 @@ public:
 		uint64 extradata, extradata1, extradata2, extradata3;
 		uint32 pid;
 		uint64 logTime;
+		uint32 appFlags;
 	};
 
 	typedef std::vector<ComponentInfos> COMPONENTS;
@@ -117,9 +103,8 @@ public:
 	}
 
 	void addComponent(int32 uid, const char* username, 
-		COMPONENT_TYPE componentType, COMPONENT_ID componentID, COMPONENT_ORDER globalorderid, COMPONENT_ORDER grouporderid,
-		uint32 intaddr, uint16 intport, 
-		uint32 extaddr, uint16 extport, std::string& extaddrEx, uint32 pid,
+		COMPONENT_TYPE componentType, COMPONENT_ID componentID, COMPONENT_ORDER globalorderid, COMPONENT_ORDER grouporderid, COMPONENT_GUS gus,
+		uint32 intaddr, uint16 intport, uint32 extaddr, uint16 extport, std::string& extaddrEx, uint32 pid,
 		float cpu, float mem, uint32 usedmem, uint64 extradata, uint64 extradata1, uint64 extradata2, uint64 extradata3,
 		Network::Channel* pChannel = NULL);
 
@@ -190,6 +175,11 @@ public:
 	Network::Channel* getDbmgrChannel();
 	Network::Channel* getLoggerChannel();
 
+	/**
+		统计某个UID下的所有组件数量
+	*/
+	size_t getGameSrvComponentsSize(int32 uid);
+
 	/** 
 		获取游戏服务端必要组件的注册数量。
 	*/
@@ -211,6 +201,8 @@ public:
 
 	bool findLogger();
 	
+	void broadcastSelf();
+
 private:
 	virtual bool process();
 	bool findComponents();

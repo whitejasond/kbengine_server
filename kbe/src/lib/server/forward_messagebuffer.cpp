@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #include "forward_messagebuffer.h"
@@ -41,7 +23,12 @@ ForwardComponent_MessageBuffer::ForwardComponent_MessageBuffer(Network::NetworkI
 ForwardComponent_MessageBuffer::~ForwardComponent_MessageBuffer()
 {
 	//dispatcher().cancelTask(this);
+	clear();
+}
 
+//-------------------------------------------------------------------------------------
+void ForwardComponent_MessageBuffer::clear()
+{
 	MSGMAP::iterator iter = pMap_.begin();
 	for(; iter != pMap_.end(); ++iter)
 	{
@@ -111,6 +98,9 @@ bool ForwardComponent_MessageBuffer::process()
 
 			for(; itervec != iter->second.end(); )
 			{
+				if (!(*itervec)->isOK())
+					return true;
+
 				cinfos->pChannel->send((*itervec)->pBundle);
 				(*itervec)->pBundle = NULL;
 
@@ -152,6 +142,12 @@ ForwardAnywhere_MessageBuffer::~ForwardAnywhere_MessageBuffer()
 {
 	//dispatcher().cancelTask(this);
 
+	clear();
+}
+
+//-------------------------------------------------------------------------------------
+void ForwardAnywhere_MessageBuffer::clear()
+{
 	std::vector<ForwardItem*>::iterator iter = pBundles_.begin();
 	for(; iter != pBundles_.end(); )
 	{
@@ -215,6 +211,17 @@ bool ForwardAnywhere_MessageBuffer::process()
 		int icount = 5;
 
 		std::vector<ForwardItem*>::iterator iter = pBundles_.begin();
+		for (; iter != pBundles_.end(); ++iter)
+		{
+			if ((*iter)->isOK())
+				break;
+		}
+		
+		// 必须所有的ForwardItem都处于ok状态
+		// 何时不处于ok状态？例如：cellappmgr中的ForwardItem需要等待cellapp初始化完毕之后才ok
+		if (iter == pBundles_.end())
+			return true;
+
 		for(; iter != pBundles_.end(); )
 		{
 			Network::Channel* pChannel = NULL;
@@ -229,7 +236,7 @@ bool ForwardAnywhere_MessageBuffer::process()
 			{
 				while(pChannel == NULL)
 				{
-					if(cts[idx].state != COMPONENT_STATE_RUN)
+					if (cts[idx].state != COMPONENT_STATE_RUN || (cts[idx].appFlags & APP_FLAGS_NOT_PARTCIPATING_LOAD_BALANCING) > 0)
 					{
 						if(++idx >= cts.size())
 							idx = 0;
